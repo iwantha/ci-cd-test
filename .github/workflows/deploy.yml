@@ -13,10 +13,10 @@ jobs:
       - name: Pull code on server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 20.212.118.164
-          username: wso2
-          key: -----BEGIN OPENSSH PRIVATE KEY-----b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZWQyNTUxOQAAACC9EptQPlnZrZaqUwA3tqy85UpLmTKXqL+Q1rf7ZQ+AigAAAKAJKr0CCSq9AgAAAAtzc2gtZWQyNTUxOQAAACC9EptQPlnZrZaqUwA3tqy85UpLmTKXqL+Q1rf7ZQ+AigAAAECJ6dBF4p4BPrsqTRFrhkI4GqRXVcefTw00fEi2nwctIL0Sm1A+WdmtlqpTADe2rLzlSkuZMpeov5DWt/tlD4CKAAAAGHdzbzJAdm0tY29tLWNpY2QtdGVzdGluZwECAwQF-----END OPENSSH PRIVATE KEY-----
-          port: 5222
+          host: ${{ secrets.DEV_SSH_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.DEV_SSH_PORT }}
           script: |
             set -e
             cd /home/httpd/ci-cd-test
