@@ -18,6 +18,7 @@ jobs:
         run: |
           ssh -p ${{ secrets.DEV_SSH_PORT }} \
               -i ~/.ssh/id_rsa \
+              -o IdentitiesOnly=yes \
               -o StrictHostKeyChecking=no \
               ${{ secrets.DEV_SSH_USER }}@${{ secrets.DEV_SSH_HOST }} \
               "echo ✅ SSH connection successful"
