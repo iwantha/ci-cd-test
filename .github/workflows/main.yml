@@ -21,7 +21,7 @@ jobs:
           port: ${{ secrets.DEV_SSH_PORT }}
           script: |
             set -e
-            cd /Users/iwantha/Downloads/Test/ci-cd-test
+            cd /home/httpd/ci-cd-test
 
             echo "==> Pulling latest code from dev..."
             git pull origin dev
