@@ -8,17 +8,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Setup SSH key
+      # ── 0. Checkout code ──────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Full history for rsync diffs
+          
+      # ── 1. Set up SSH ─────────────────────────────────────────────
+      - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEV_SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.DEV_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.DEV_SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Test SSH connection
+      # ── 2. Sync files to Azure VM via rsync over SSH ──────────────
+      - name: Deploy files via rsync
         run: |
-          ssh -vvv -p ${{ secrets.DEV_SSH_PORT }} \
-              -i ~/.ssh/id_ed25519 \
-              -o IdentitiesOnly=yes \
-              -o StrictHostKeyChecking=no \
-              ${{ secrets.DEV_SSH_USER }}@${{ secrets.DEV_SSH_HOST }} \
-              "echo ✅ SSH connection successful"
+          rsync -avz --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='node_modules/' \
+            --exclude='sites/default/settings.php' \
+            --exclude='sites/default/files/' \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.DEV_SSH_PORT }} -o StrictHostKeyChecking=no" \
+            ./ \
+            ${{ secrets.DEV_SSH_USER }}@${{ secrets.DEV_SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
+
+      
