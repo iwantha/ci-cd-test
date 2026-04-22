@@ -1,58 +1,37 @@
-name: Test SSH Connectivity
-on:
-  workflow_dispatch:
+name: Deploy Drupal PHP to Azure VM
 
+on:
+  push:
+    branches:
+      - main
 jobs:
-  ssh-test:
+  deploy:
+    name: Deploy to Azure VM
     runs-on: ubuntu-latest
 
     steps:
-      # ── 0. Debug: confirm secrets are populated ───────────────────
-      - name: Debug secrets presence
-        env:
-          SSH_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
-          SSH_USER: ${{ secrets.DEV_SSH_USER }}
-          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
-        run: |
-          echo "KEY length   : ${#SSH_KEY}"
-          echo "HOST is set  : ${{ secrets.DEV_SSH_HOST != '' }}"
-          echo "USER is set  : ${{ secrets.DEV_SSH_USER != '' }}"
-          echo "PORT is set  : ${{ secrets.DEV_SSH_PORT != '' }}"
-
-      # ── 1. Checkout ───────────────────────────────────────────────
+      # ── 0. Checkout ───────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ── 2. SSH — use the dedicated action instead of raw shell ────
+      # ── 1. Configure SSH agent ────────────────────────────────────
       - name: Configure SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
 
-      # ── 3. Keyscan — with timeout and fallback port ───────────────
+      # ── 2. Add VM to known hosts ──────────────────────────────────
       - name: Add VM to known hosts
         env:
           SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
           SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
         run: |
           PORT=${SSH_PORT:-22}
-          echo "Scanning $SSH_HOST on port $PORT"
           ssh-keyscan -T 10 -p "$PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
-      # ── 4. Test connection ────────────────────────────────────────
-      - name: Test SSH connection
-        env:
-          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
-          SSH_USER: ${{ secrets.DEV_SSH_USER }}
-          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
-        run: |
-          PORT=${SSH_PORT:-22}
-          ssh -p "$PORT" -o ConnectTimeout=10 "$SSH_USER@$SSH_HOST" "echo SSH OK && whoami"
-
-      # ── 5. Deploy via rsync ───────────────────────────────────────
+      # ── 3. Deploy files via rsync ─────────────────────────────────
       - name: Deploy files via rsync
         env:
           SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
@@ -64,7 +43,6 @@ jobs:
           rsync -avz --delete \
             --exclude='.git/' \
             --exclude='.github/' \
-            --exclude='node_modules/' \
             --exclude='sites/default/settings.php' \
             --exclude='sites/default/files/' \
             -e "ssh -p $PORT -o StrictHostKeyChecking=no" \
