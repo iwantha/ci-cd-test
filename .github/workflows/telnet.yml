@@ -8,6 +8,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Debug secrets presence
+        run: |
+          echo "HOST is set: ${{ secrets.DEV_SSH_HOST != '' }}"
+          echo "USER is set: ${{ secrets.DEV_SSH_USER != '' }}"
+          echo "PORT is set: ${{ secrets.DEV_SSH_PORT != '' }}"
+          echo "KEY length: ${#SSH_KEY}"
+        env:
+          SSH_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+          
       # ── 0. Checkout code ──────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
