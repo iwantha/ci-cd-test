@@ -1,5 +1,4 @@
 name: Test SSH Connectivity
-
 on:
   workflow_dispatch:
 
@@ -8,40 +7,66 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ── 0. Debug: confirm secrets are populated ───────────────────
       - name: Debug secrets presence
-        run: |
-          echo "HOST is set: ${{ secrets.DEV_SSH_HOST != '' }}"
-          echo "USER is set: ${{ secrets.DEV_SSH_USER != '' }}"
-          echo "PORT is set: ${{ secrets.DEV_SSH_PORT != '' }}"
-          echo "KEY length: ${#SSH_KEY}"
         env:
           SSH_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
-          
-      # ── 0. Checkout code ──────────────────────────────────────────
+          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEV_SSH_USER }}
+          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
+        run: |
+          echo "KEY length   : ${#SSH_KEY}"
+          echo "HOST is set  : ${{ secrets.DEV_SSH_HOST != '' }}"
+          echo "USER is set  : ${{ secrets.DEV_SSH_USER != '' }}"
+          echo "PORT is set  : ${{ secrets.DEV_SSH_PORT != '' }}"
+
+      # ── 1. Checkout ───────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # Full history for rsync diffs
-          
-      # ── 1. Set up SSH ─────────────────────────────────────────────
-      - name: Configure SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEV_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.DEV_SSH_HOST }} >> ~/.ssh/known_hosts
+          fetch-depth: 0
 
-      # ── 2. Sync files to Azure VM via rsync over SSH ──────────────
-      - name: Deploy files via rsync
+      # ── 2. SSH — use the dedicated action instead of raw shell ────
+      - name: Configure SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+
+      # ── 3. Keyscan — with timeout and fallback port ───────────────
+      - name: Add VM to known hosts
+        env:
+          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
         run: |
+          PORT=${SSH_PORT:-22}
+          echo "Scanning $SSH_HOST on port $PORT"
+          ssh-keyscan -T 10 -p "$PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      # ── 4. Test connection ────────────────────────────────────────
+      - name: Test SSH connection
+        env:
+          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEV_SSH_USER }}
+          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
+        run: |
+          PORT=${SSH_PORT:-22}
+          ssh -p "$PORT" -o ConnectTimeout=10 "$SSH_USER@$SSH_HOST" "echo SSH OK && whoami"
+
+      # ── 5. Deploy via rsync ───────────────────────────────────────
+      - name: Deploy files via rsync
+        env:
+          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEV_SSH_USER }}
+          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          PORT=${SSH_PORT:-22}
           rsync -avz --delete \
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='node_modules/' \
             --exclude='sites/default/settings.php' \
             --exclude='sites/default/files/' \
-            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.DEV_SSH_PORT }} -o StrictHostKeyChecking=no" \
+            -e "ssh -p $PORT -o StrictHostKeyChecking=no" \
             ./ \
-            ${{ secrets.DEV_SSH_USER }}@${{ secrets.DEV_SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
-
-      
+            "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
