@@ -13,24 +13,24 @@ jobs:
       - name: Configure SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ [secrets.DEV](http://secrets.DEV)_SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+
       - name: Add VM to known hosts
         env:
-          SSH_HOST: ${{ [secrets.DEV](http://secrets.DEV)_SSH_HOST }}
-          SSH_PORT: ${{ [secrets.DEV](http://secrets.DEV)_SSH_PORT }}
+          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
         run: |
           PORT=${SSH_PORT:-22}
           ssh-keyscan -T 10 -p "$PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
       - name: Pull code on server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ [secrets.DEV](http://secrets.DEV)_SSH_HOST }}
-          username: ${{ [secrets.DEV](http://secrets.DEV)_SSH_USER }}
-          key: ${{ [secrets.DEV](http://secrets.DEV)_SSH_PRIVATE_KEY }}
-          port: ${{ [secrets.DEV](http://secrets.DEV)_SSH_PORT }}
+          host: ${{ secrets.DEV_SSH_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.DEV_SSH_PORT }}
           script: |
             set -e
-            git config --global --add [safe.directory](http://safe.directory) /home/httpd/[com-d10.wso2.com/wso2-website-drupal10](http://com-d10.wso2.com/wso2-website-drupal10)
-            cd /home/httpd/[com-d10.wso2.com/wso2-website-drupal10](http://com-d10.wso2.com/wso2-website-drupal10)
+            cd /home/httpd/com-d10.wso2.com/wso2-website-drupal10
             echo "==> Pulling latest code from dev..."
             git pull origin dev
