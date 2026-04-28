@@ -1,18 +1,27 @@
 name: Deploy to Dev Server
-
 on:
+  workflow_dispatch:
   push:
     branches:
       - dev
       - main
-
 jobs:
   deploy:
     name: SSH Deploy + Drush
     runs-on: ubuntu-latest
-
     steps:
-      # ── 1. Pull latest code ───────────────────────────────────────────────────
+      - name: Configure SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+
+      - name: Add VM to known hosts
+        env:
+          SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEV_SSH_PORT }}
+        run: |
+          PORT=${SSH_PORT:-22}
+          ssh-keyscan -T 10 -p "$PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
       - name: Pull code on server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -23,7 +32,5 @@ jobs:
           script: |
             set -e
             cd /home/httpd/ci-cd-test
-
             echo "==> Pulling latest code from dev..."
             git pull origin dev
-
