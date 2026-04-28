@@ -30,6 +30,7 @@ jobs:
           key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
           port: ${{ secrets.DEV_SSH_PORT }}
           script: |
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
             set -e
             git config --global --add safe.directory /home/httpd/com-d10.wso2.com/wso2-website-drupal10
             cd /home/httpd/com-d10.wso2.com/wso2-website-drupal10
