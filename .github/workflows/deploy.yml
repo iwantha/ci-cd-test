@@ -34,5 +34,5 @@ jobs:
             cd /home/httpd/com-d10.wso2.com/wso2-website-drupal10
             echo "==> Pulling latest code from dev..."
             sudo -u www-data git pull origin dev
-            drush cim -y
-            drush cr
+            vendor/bin/drush cim -y
+            vendor/bin/drush cr
