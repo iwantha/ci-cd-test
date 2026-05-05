@@ -33,4 +33,4 @@ jobs:
             set -e
             cd /home/httpd/com-d10.wso2.com/wso2-website-drupal10
             echo "==> Pulling latest code from dev..."
-            git pull origin dev
+            sudo -u www-data git pull origin dev
